@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
-import db, { initializeDatabase } from "./database.js";
+import pool, { initializeDatabase } from "./database.js";
 import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
@@ -20,31 +20,47 @@ await initializeDatabase();
 console.log("Database initialized successfully");
 
 // Helper function to run db queries
-const dbRun = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve({ lastID: this.lastID, changes: this.changes });
-    });
+const processQuery = (sql) => {
+  let i = 1;
+  let query = sql.replace(/\?/g, () => `$${i++}`);
+  
+  const cols = [
+    'fullName', 'createdAt', 'taskId', 'studentId', 'submissionFile', 
+    'submittedAt', 'className', 'subjectId', 'createdBy', 'senderId', 
+    'receiverId', 'groupId', 'readBy', 'targetClass', 'updatedAt', 
+    'quizId', 'taskCompletions', 'quizResults', 'isPresent'
+  ];
+  
+  cols.forEach(col => {
+    const reg = new RegExp(`\\b${col}\\b`, 'g');
+    query = query.replace(reg, `"${col}"`);
   });
+
+  query = query.replace(/INSERT OR REPLACE INTO settings \((.*?)\) VALUES \((.*?)\)/i, 
+    "INSERT INTO settings ($1) VALUES ($2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, \"updatedAt\" = CURRENT_TIMESTAMP");
+
+  query = query.replace(/ON CONFLICT\("taskId", "studentId"\)/i, 'ON CONFLICT ("taskId", "studentId")');
+  
+  if (query.trim().toUpperCase().startsWith('INSERT') && !query.toUpperCase().includes('RETURNING')) {
+     query += ' RETURNING id';
+  }
+  
+  return query;
 };
 
-const dbGet = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+const dbRun = async (sql, params = []) => {
+  const result = await pool.query(processQuery(sql), params);
+  return { lastID: result.rows[0]?.id || 0, changes: result.rowCount };
 };
 
-const dbAll = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows || []);
-    });
-  });
+const dbGet = async (sql, params = []) => {
+  const result = await pool.query(processQuery(sql), params);
+  return result.rows[0];
+};
+
+const dbAll = async (sql, params = []) => {
+  const result = await pool.query(processQuery(sql), params);
+  return result.rows || [];
 };
 
 // ===== AUTH ENDPOINTS =====
