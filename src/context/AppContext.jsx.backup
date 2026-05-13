@@ -1,0 +1,1073 @@
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { taskAPI, subjectAPI, messagesAPI, announcementsAPI, quizzesAPI, attendanceAPI, gradesAPI } from "../api.js";
+
+const AppContext = createContext();
+
+const initialData = {
+  tasks: [],
+  attendance: [],
+  grades: [],
+  messages: [],
+  announcements: [],
+  quizzes: [],
+  quizResults: [],
+  library: [],
+  events: [],
+  schedule: {
+    "10-A": {
+      Dushanba: ["Matematika", "Ona tili", "Ingliz tili"],
+      Seshanba: ["Tarix", "Fizika"],
+      Chorshanba: ["Ona tili", "Matematika", "Geografiya"],
+      Payshanba: ["Ingliz tili", "Jismoniy tarbiya"],
+      Juma: ["Biologiya", "Kimyo", "Informatika"],
+      Shanba: ["Adabiyot", "Matematika"],
+    },
+  },
+  subjects: [
+    {
+      id: "matematika",
+      name: "Matematika",
+      teacher: "Shox",
+      phone: "+998901112233",
+    },
+    {
+      id: "ona-tili",
+      name: "Ona tili",
+      teacher: "Dilnoza",
+      phone: "+998901112244",
+    },
+    {
+      id: "ingliz-tili",
+      name: "Ingliz tili",
+      teacher: "Jasur",
+      phone: "+998901112255",
+    },
+    { id: "tarix", name: "Tarix", teacher: "Aziz", phone: "+998901112266" },
+  ],
+};
+
+export const AppProvider = ({ children }) => {
+  const [data, setData] = useState(() => {
+    const saved = localStorage.getItem("schoolPlannerData_v2");
+    if (saved) return JSON.parse(saved);
+    return initialData;
+  });
+
+  const [syncInfo, setSyncInfo] = useState(() => ({
+    status: "synced",
+    lastSynced: new Date().toISOString(),
+    pending: 0,
+  }));
+
+  // Load data from backend on mount
+  useEffect(() => {
+    const loadDataFromBackend = async () => {
+      try {
+        setSyncInfo({ status: "syncing", lastSynced: new Date().toISOString(), pending: 0 });
+        const [tasksData, subjectsData, messagesData, announcementsData, quizzesData, attendanceData, gradesData] = await Promise.all([
+          taskAPI.getTasks(),
+          subjectAPI.getSubjects(),
+          messagesAPI.getMessages(),
+          announcementsAPI.getAnnouncements(),
+          quizzesAPI.getQuizzes(),
+          attendanceAPI.getAttendance(),
+          gradesAPI.getGrades(),
+        ]);
+
+        if (tasksData.length > 0 || subjectsData.length > 0) {
+          setData((prev) => ({
+            ...prev,
+            tasks: tasksData || prev.tasks,
+            subjects: subjectsData.length > 0 ? subjectsData : prev.subjects,
+            messages: messagesData || prev.messages,
+            announcements: announcementsData || prev.announcements,
+            quizzes: quizzesData || prev.quizzes,
+            attendance: attendanceData || prev.attendance,
+            grades: gradesData || prev.grades,
+          }));
+        }
+        setSyncInfo({
+          status: "synced",
+          lastSynced: new Date().toISOString(),
+          pending: 0,
+        });
+      } catch (error) {
+        console.log("Backend unavailable, using localStorage");
+        setSyncInfo({
+          status: "synced",
+          lastSynced: new Date().toISOString(),
+          pending: 0,
+        });
+      }
+    };
+    loadDataFromBackend();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("schoolPlannerData_v2", JSON.stringify(data));
+    setSyncInfo((prev) => ({
+      status: "pending",
+      lastSynced: prev.lastSynced,
+      pending: prev.pending + 1,
+    }));
+    const timer = setTimeout(() => {
+      setSyncInfo({
+        status: "synced",
+        lastSynced: new Date().toISOString(),
+        pending: 0,
+      });
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [data]);
+
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "schoolPlannerData_v2" && e.newValue) {
+        try {
+          setData(JSON.parse(e.newValue));
+        } catch (err) {}
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  const syncToServer = () => {
+    setSyncInfo({
+      status: "pending",
+      lastSynced: syncInfo.lastSynced,
+      pending: syncInfo.pending + 1,
+    });
+    setTimeout(() => {
+      setSyncInfo({
+        status: "synced",
+        lastSynced: new Date().toISOString(),
+        pending: 0,
+      });
+    }, 1200);
+  };
+
+  const addTask = async (className, subject, taskText, deadline) => {
+    let resolvedClass = className;
+    let resolvedSubject = subject;
+    let resolvedTask = taskText;
+    let resolvedDeadline = deadline;
+
+    if (deadline === undefined) {
+      resolvedClass = "Barcha sinflar";
+      resolvedSubject = className;
+      resolvedTask = subject;
+      resolvedDeadline = taskText;
+    }
+
+    const subjectKey = String(resolvedSubject || "").trim();
+    const matchedSubject = (data.subjects || []).find(
+      (s) =>
+        String(s.id).toLowerCase() === subjectKey.toLowerCase() ||
+        String(s.name).toLowerCase() === subjectKey.toLowerCase(),
+    );
+    const subjectId = matchedSubject
+      ? matchedSubject.id
+      : subjectKey.toLowerCase().replace(/\s+/g, "-");
+    const subjectName = matchedSubject ? matchedSubject.name : subjectKey;
+
+    try {
+      await taskAPI.addTask({
+        title: resolvedTask,
+        className: resolvedClass,
+        subject: subjectName,
+        subjectId,
+        deadline: resolvedDeadline,
+      });
+      setData((prev) => ({
+        ...prev,
+        tasks: [
+          ...(prev.tasks || []),
+          {
+            id: Date.now(),
+            className: resolvedClass,
+            subject: subjectName,
+            subjectId,
+            task: resolvedTask,
+            deadline: resolvedDeadline,
+            completedBy: [],
+            completed: false,
+          },
+        ],
+      }));
+    } catch (error) {
+      console.error("Failed to add task:", error);
+      setData((prev) => ({
+        ...prev,
+        tasks: [
+          ...(prev.tasks || []),
+          {
+            id: Date.now(),
+            className: resolvedClass,
+            subject: subjectName,
+            subjectId,
+            task: resolvedTask,
+            deadline: resolvedDeadline,
+            completedBy: [],
+            completed: false,
+          },
+        ],
+      }));
+    }
+  };
+
+  const toggleTask = (taskId, studentId, filePayload = null) => {
+    setData((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) => {
+        if (t.id === taskId) {
+          if (!studentId) {
+            return { ...t, completed: !t.completed };
+          }
+
+          const completedBy = t.completedBy || [];
+          const existingIndex = completedBy.findIndex(
+            (c) => c === studentId || c.studentId === studentId,
+          );
+
+          let newCompletedBy = [...completedBy];
+          if (existingIndex >= 0 && !filePayload) {
+            newCompletedBy.splice(existingIndex, 1);
+          } else if (existingIndex === -1 && filePayload) {
+            newCompletedBy.push({
+              studentId,
+              fileData: filePayload,
+              image: filePayload.type === "image" ? filePayload.data : null,
+              timestamp: new Date().toISOString(),
+              approved: false,
+              rejected: false,
+            });
+          } else if (existingIndex >= 0 && filePayload) {
+            newCompletedBy[existingIndex] = {
+              studentId,
+              fileData: filePayload,
+              image: filePayload.type === "image" ? filePayload.data : null,
+              timestamp: new Date().toISOString(),
+              approved: false,
+              rejected: false,
+            };
+          } else if (existingIndex === -1 && !filePayload) {
+            newCompletedBy.push({
+              studentId,
+              image: null,
+              timestamp: new Date().toISOString(),
+              approved: false,
+              rejected: false,
+            });
+          }
+
+          try {
+            taskAPI.toggleTask(taskId, {
+              studentId,
+              completed: existingIndex >= 0 ? false : true,
+              submissionFile: filePayload ? JSON.stringify(filePayload) : null,
+            });
+          } catch (error) {
+            console.error("Failed to toggle task on backend:", error);
+          }
+
+          return { ...t, completedBy: newCompletedBy };
+        }
+        return t;
+      }),
+    }));
+  };
+
+  const markAttendance = async (date, className, studentId, isPresent) => {
+    try {
+      await attendanceAPI.recordAttendance({ date, className, studentId, isPresent });
+      setData((prev) => {
+        const existing = (prev.attendance || []).filter(
+          (a) => !(a.date === date && a.studentId === studentId),
+        );
+        return {
+          ...prev,
+          attendance: [
+            ...existing,
+            { id: Date.now(), date, className, studentId, isPresent },
+          ],
+        };
+      });
+    } catch (error) {
+      console.error("Failed to mark attendance:", error);
+      setData((prev) => {
+        const existing = (prev.attendance || []).filter(
+          (a) => !(a.date === date && a.studentId === studentId),
+        );
+        return {
+          ...prev,
+          attendance: [
+            ...existing,
+            { id: Date.now(), date, className, studentId, isPresent },
+          ],
+        };
+      });
+    }
+  };
+
+  const addGrade = async (date, className, subject, studentId, grade) => {
+    try {
+      await gradesAPI.recordGrade({ date, className, subject, studentId, grade });
+      setData((prev) => {
+        const existing = (prev.grades || []).filter(
+          (g) =>
+            !(
+              g.date === date &&
+              g.subject === subject &&
+              g.studentId === studentId
+            ),
+        );
+        if (!grade) return { ...prev, grades: existing };
+        return {
+          ...prev,
+          grades: [
+            ...existing,
+            { id: Date.now(), date, className, subject, studentId, grade },
+          ],
+        };
+      });
+    } catch (error) {
+      console.error("Failed to add grade:", error);
+      setData((prev) => {
+        const existing = (prev.grades || []).filter(
+          (g) =>
+            !(
+              g.date === date &&
+              g.subject === subject &&
+              g.studentId === studentId
+            ),
+        );
+        if (!grade) return { ...prev, grades: existing };
+        return {
+          ...prev,
+          grades: [
+            ...existing,
+            { id: Date.now(), date, className, subject, studentId, grade },
+          ],
+        };
+      });
+    }
+  };
+
+  const deleteTask = async (taskId) => {
+    try {
+      await taskAPI.deleteTask(taskId);
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.filter((t) => t.id !== taskId),
+      }));
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.filter((t) => t.id !== taskId),
+      }));
+    }
+  };
+
+  const approveTask = (taskId, studentId, isApproved) => {
+    setData((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) => {
+        if (t.id === taskId) {
+          return {
+            ...t,
+            completedBy: (t.completedBy || []).map((c) => {
+              const sid = c.studentId || c;
+              if (sid === studentId) {
+                return typeof c === "string"
+                  ? {
+                      studentId: c,
+                      approved: isApproved,
+                      rejected: !isApproved,
+                    }
+                  : { ...c, approved: isApproved, rejected: !isApproved };
+              }
+              return c;
+            }),
+          };
+        }
+        return t;
+      }),
+    }));
+  };
+
+  const updateSchedule = (className, day, classes) => {
+    setData((prev) => ({
+      ...prev,
+      schedule: {
+        ...prev.schedule,
+        [className]: {
+          ...(prev.schedule[className] || {}),
+          [day]: classes,
+        },
+      },
+    }));
+  };
+
+  const addSubject = async (name, teacher, phone) => {
+    const subjectId = String(name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+    try {
+      await subjectAPI.addSubject(name, teacher, phone);
+      setData((prev) => ({
+        ...prev,
+        subjects: [
+          ...(prev.subjects || []),
+          {
+            id: subjectId,
+            name: name.trim(),
+            teacher: teacher.trim(),
+            phone: phone.trim(),
+          },
+        ],
+      }));
+    } catch (error) {
+      console.error("Failed to add subject:", error);
+      setData((prev) => ({
+        ...prev,
+        subjects: [
+          ...(prev.subjects || []),
+          {
+            id: subjectId,
+            name: name.trim(),
+            teacher: teacher.trim(),
+            phone: phone.trim(),
+          },
+        ],
+      }));
+    }
+  };
+
+  const deleteSubject = async (id) => {
+    try {
+      await subjectAPI.deleteSubject(id);
+      setData((prev) => ({
+        ...prev,
+        subjects: (prev.subjects || []).filter((s) => s.id !== id),
+      }));
+    } catch (error) {
+      console.error("Failed to delete subject:", error);
+      setData((prev) => ({
+        ...prev,
+        subjects: (prev.subjects || []).filter((s) => s.id !== id),
+      }));
+    }
+  };
+
+  const sendMessage = async (senderId, receiverId, text, attachment = null) => {
+    const newMessage = {
+      id: Date.now(),
+      senderId,
+      receiverId,
+      text,
+      image: attachment?.type === "image" ? attachment.data : null,
+      attachment,
+      timestamp: new Date().toISOString(),
+      read: false,
+      readBy: [senderId],
+    };
+
+    setData((prev) => ({
+      ...prev,
+      messages: [...(prev.messages || []), newMessage],
+    }));
+
+    try {
+      await messagesAPI.sendMessage({
+        senderId,
+        receiverId,
+        groupId: receiverId?.startsWith("GROUP_") ? receiverId : null,
+        text,
+        attachment: attachment ? JSON.stringify(attachment) : null,
+      });
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
+  };
+
+  const markMessagesAsRead = (targetId, myId) => {
+    setData((prev) => ({
+      ...prev,
+      messages: (prev.messages || []).map((m) => {
+        if (String(targetId).startsWith("GROUP_")) {
+          if (m.receiverId === targetId) {
+            const readBy = m.readBy || [m.senderId];
+            if (!readBy.includes(myId)) {
+              return { ...m, readBy: [...readBy, myId] };
+            }
+          }
+        } else {
+          if (m.senderId === targetId && m.receiverId === myId && !m.read) {
+            return { ...m, read: true };
+          }
+        }
+        return m;
+      }),
+    }));
+  };
+
+  const addAnnouncement = async (text, author, targetClass) => {
+    const newAnnouncement = {
+      id: Date.now(),
+      text,
+      author,
+      targetClass,
+      timestamp: new Date().toISOString(),
+    };
+
+    setData((prev) => ({
+      ...prev,
+      announcements: [newAnnouncement, ...(prev.announcements || [])],
+    }));
+
+    try {
+      await announcementsAPI.createAnnouncement({ text, author, targetClass });
+    } catch (error) {
+      console.error("Failed to add announcement:", error);
+    }
+  };
+
+  const deleteAnnouncement = (id) => {
+    setData((prev) => ({
+      ...prev,
+      announcements: (prev.announcements || []).filter((a) => a.id !== id),
+    }));
+  };
+
+  const addQuiz = async (subject, className, title, questions) => {
+    const newQuiz = { id: Date.now(), subject, className, title, questions };
+
+    setData((prev) => ({
+      ...prev,
+      quizzes: [newQuiz, ...(prev.quizzes || [])],
+    }));
+
+    try {
+      await quizzesAPI.createQuiz({ subject, className, title, questions });
+    } catch (error) {
+      console.error("Failed to add quiz:", error);
+    }
+  };
+
+  const submitQuiz = async (quizId, studentId, score) => {
+    setData((prev) => ({
+      ...prev,
+      quizResults: [
+        ...(prev.quizResults || []),
+        { id: Date.now(), quizId, studentId, score },
+      ],
+    }));
+
+    try {
+      await quizzesAPI.submitQuizResult({ quizId, studentId, score });
+    } catch (error) {
+      console.error("Failed to submit quiz:", error);
+    }
+  };
+
+  const addLibraryItem = (title, type, url, subject, addedBy) => {
+    setData((prev) => ({
+      ...prev,
+      library: [
+        { id: Date.now(), title, type, url, subject, addedBy },
+        ...(prev.library || []),
+      ],
+    }));
+  };
+
+  const addEvent = (title, date, type) => {
+    setData((prev) => ({
+      ...prev,
+      events: [{ id: Date.now(), title, date, type }, ...(prev.events || [])],
+    }));
+  };
+
+  const editMessage = (messageId, newText) => {
+    setData((prev) => ({
+      ...prev,
+      messages: (prev.messages || []).map((m) =>
+        m.id === messageId ? { ...m, text: newText, edited: true } : m,
+      ),
+    }));
+  };
+
+  const deleteMessage = (messageId) => {
+    setData((prev) => ({
+      ...prev,
+      messages: (prev.messages || []).filter((m) => m.id !== messageId),
+    }));
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        data,
+        setData,
+        addTask,
+        toggleTask,
+        deleteTask,
+        approveTask,
+        markAttendance,
+        addGrade,
+        updateSchedule,
+        sendMessage,
+        markMessagesAsRead,
+        editMessage,
+        deleteMessage,
+        addAnnouncement,
+        deleteAnnouncement,
+        addQuiz,
+        submitQuiz,
+        addLibraryItem,
+        addEvent,
+        addSubject,
+        deleteSubject,
+        syncInfo,
+        syncToServer,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useAppContext = () => useContext(AppContext);
+      name: "Matematika",
+      teacher: "Shox",
+      phone: "+998901112233",
+    },
+    {
+      id: "ona-tili",
+      name: "Ona tili",
+      teacher: "Dilnoza",
+      phone: "+998901112244",
+    },
+    {
+      id: "ingliz-tili",
+      name: "Ingliz tili",
+      teacher: "Jasur",
+      phone: "+998901112255",
+    },
+    { id: "tarix", name: "Tarix", teacher: "Aziz", phone: "+998901112266" },
+  ],
+};
+
+export const AppProvider = ({ children }) => {
+  const [data, setData] = useState(() => {
+    const saved = localStorage.getItem("schoolPlannerData_v2");
+    if (saved) return JSON.parse(saved);
+    return initialData;
+  });
+
+  const [syncInfo, setSyncInfo] = useState(() => ({
+    status: "synced",
+    lastSynced: new Date().toISOString(),
+    pending: 0,
+  }));
+
+  useEffect(() => {
+    localStorage.setItem("schoolPlannerData_v2", JSON.stringify(data));
+    setSyncInfo((prev) => ({
+      status: "pending",
+      lastSynced: prev.lastSynced,
+      pending: prev.pending + 1,
+    }));
+    const timer = setTimeout(() => {
+      setSyncInfo({
+        status: "synced",
+        lastSynced: new Date().toISOString(),
+        pending: 0,
+      });
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [data]);
+
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "schoolPlannerData_v2" && e.newValue) {
+        try {
+          setData(JSON.parse(e.newValue));
+        } catch (err) {}
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+  const syncToServer = () => {
+    setSyncInfo({
+      status: "pending",
+      lastSynced: syncInfo.lastSynced,
+      pending: syncInfo.pending + 1,
+    });
+    setTimeout(() => {
+      setSyncInfo({
+        status: "synced",
+        lastSynced: new Date().toISOString(),
+        pending: 0,
+      });
+    }, 1200);
+  };
+  const addTask = (className, subject, taskText, deadline) => {
+    let resolvedClass = className;
+    let resolvedSubject = subject;
+    let resolvedTask = taskText;
+    let resolvedDeadline = deadline;
+
+    if (deadline === undefined) {
+      resolvedClass = "Barcha sinflar";
+      resolvedSubject = className;
+      resolvedTask = subject;
+      resolvedDeadline = taskText;
+    }
+
+    setData((prev) => {
+      const subjectKey = String(resolvedSubject || "").trim();
+      const matchedSubject = (prev.subjects || []).find(
+        (s) =>
+          String(s.id).toLowerCase() === subjectKey.toLowerCase() ||
+          String(s.name).toLowerCase() === subjectKey.toLowerCase(),
+      );
+      const subjectId = matchedSubject
+        ? matchedSubject.id
+        : subjectKey.toLowerCase().replace(/\s+/g, "-");
+      const subjectName = matchedSubject ? matchedSubject.name : subjectKey;
+
+      return {
+        ...prev,
+        tasks: [
+          ...(prev.tasks || []),
+          {
+            id: Date.now(),
+            className: resolvedClass,
+            subject: subjectName,
+            subjectId,
+            task: resolvedTask,
+            deadline: resolvedDeadline,
+            completedBy: [],
+            completed: false,
+          },
+        ],
+      };
+    });
+  };
+
+  const toggleTask = (taskId, studentId, filePayload = null) => {
+    setData((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) => {
+        if (t.id === taskId) {
+          if (!studentId) {
+            return { ...t, completed: !t.completed };
+          }
+
+          const completedBy = t.completedBy || [];
+          const existingIndex = completedBy.findIndex(
+            (c) => c === studentId || c.studentId === studentId,
+          );
+
+          let newCompletedBy = [...completedBy];
+          if (existingIndex >= 0 && !filePayload) {
+            newCompletedBy.splice(existingIndex, 1);
+          } else if (existingIndex === -1 && filePayload) {
+            newCompletedBy.push({
+              studentId,
+              fileData: filePayload,
+              image: filePayload.type === "image" ? filePayload.data : null,
+              timestamp: new Date().toISOString(),
+              approved: false,
+              rejected: false,
+            });
+          } else if (existingIndex >= 0 && filePayload) {
+            newCompletedBy[existingIndex] = {
+              studentId,
+              fileData: filePayload,
+              image: filePayload.type === "image" ? filePayload.data : null,
+              timestamp: new Date().toISOString(),
+              approved: false,
+              rejected: false,
+            };
+          } else if (existingIndex === -1 && !filePayload) {
+            newCompletedBy.push({
+              studentId,
+              image: null,
+              timestamp: new Date().toISOString(),
+              approved: false,
+              rejected: false,
+            });
+          }
+
+          return { ...t, completedBy: newCompletedBy };
+        }
+        return t;
+      }),
+    }));
+  };
+
+  const markAttendance = (date, className, studentId, isPresent) => {
+    setData((prev) => {
+      const existing = (prev.attendance || []).filter(
+        (a) => !(a.date === date && a.studentId === studentId),
+      );
+      return {
+        ...prev,
+        attendance: [
+          ...existing,
+          { id: Date.now(), date, className, studentId, isPresent },
+        ],
+      };
+    });
+  };
+
+  const addGrade = (date, className, subject, studentId, grade) => {
+    setData((prev) => {
+      const existing = (prev.grades || []).filter(
+        (g) =>
+          !(
+            g.date === date &&
+            g.subject === subject &&
+            g.studentId === studentId
+          ),
+      );
+      if (!grade) return { ...prev, grades: existing }; // remove grade if empty
+      return {
+        ...prev,
+        grades: [
+          ...existing,
+          { id: Date.now(), date, className, subject, studentId, grade },
+        ],
+      };
+    });
+  };
+
+  const deleteTask = (taskId) => {
+    setData((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.id !== taskId),
+    }));
+  };
+
+  const approveTask = (taskId, studentId, isApproved) => {
+    setData((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) => {
+        if (t.id === taskId) {
+          return {
+            ...t,
+            completedBy: (t.completedBy || []).map((c) => {
+              const sid = c.studentId || c;
+              if (sid === studentId) {
+                return typeof c === "string"
+                  ? {
+                      studentId: c,
+                      approved: isApproved,
+                      rejected: !isApproved,
+                    }
+                  : { ...c, approved: isApproved, rejected: !isApproved };
+              }
+              return c;
+            }),
+          };
+        }
+        return t;
+      }),
+    }));
+  };
+
+  const updateSchedule = (className, day, classes) => {
+    setData((prev) => ({
+      ...prev,
+      schedule: {
+        ...prev.schedule,
+        [className]: {
+          ...(prev.schedule[className] || {}),
+          [day]: classes,
+        },
+      },
+    }));
+  };
+
+  const addSubject = (name, teacher, phone) => {
+    const subjectId = String(name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+    setData((prev) => ({
+      ...prev,
+      subjects: [
+        ...(prev.subjects || []),
+        {
+          id: subjectId,
+          name: name.trim(),
+          teacher: teacher.trim(),
+          phone: phone.trim(),
+        },
+      ],
+    }));
+  };
+
+  const deleteSubject = (id) => {
+    setData((prev) => ({
+      ...prev,
+      subjects: (prev.subjects || []).filter((s) => s.id !== id),
+    }));
+  };
+
+  const sendMessage = (senderId, receiverId, text, attachment = null) => {
+    setData((prev) => ({
+      ...prev,
+      messages: [
+        ...(prev.messages || []),
+        {
+          id: Date.now(),
+          senderId,
+          receiverId,
+          text,
+          image: attachment?.type === "image" ? attachment.data : null,
+          attachment,
+          timestamp: new Date().toISOString(),
+          read: false,
+          readBy: [senderId],
+        },
+      ],
+    }));
+  };
+
+  const markMessagesAsRead = (targetId, myId) => {
+    setData((prev) => ({
+      ...prev,
+      messages: (prev.messages || []).map((m) => {
+        if (String(targetId).startsWith("GROUP_")) {
+          if (m.receiverId === targetId) {
+            const readBy = m.readBy || [m.senderId];
+            if (!readBy.includes(myId)) {
+              return { ...m, readBy: [...readBy, myId] };
+            }
+          }
+        } else {
+          if (m.senderId === targetId && m.receiverId === myId && !m.read) {
+            return { ...m, read: true };
+          }
+        }
+        return m;
+      }),
+    }));
+  };
+
+  const addAnnouncement = (text, author, targetClass) => {
+    setData((prev) => ({
+      ...prev,
+      announcements: [
+        {
+          id: Date.now(),
+          text,
+          author,
+          targetClass,
+          timestamp: new Date().toISOString(),
+        },
+        ...(prev.announcements || []),
+      ],
+    }));
+  };
+
+  const deleteAnnouncement = (id) => {
+    setData((prev) => ({
+      ...prev,
+      announcements: (prev.announcements || []).filter((a) => a.id !== id),
+    }));
+  };
+
+  const addQuiz = (subject, className, title, questions) => {
+    setData((prev) => ({
+      ...prev,
+      quizzes: [
+        { id: Date.now(), subject, className, title, questions },
+        ...(prev.quizzes || []),
+      ],
+    }));
+  };
+
+  const submitQuiz = (quizId, studentId, score) => {
+    setData((prev) => ({
+      ...prev,
+      quizResults: [
+        ...(prev.quizResults || []),
+        { id: Date.now(), quizId, studentId, score },
+      ],
+    }));
+  };
+
+  const addLibraryItem = (title, type, url, subject, addedBy) => {
+    setData((prev) => ({
+      ...prev,
+      library: [
+        { id: Date.now(), title, type, url, subject, addedBy },
+        ...(prev.library || []),
+      ],
+    }));
+  };
+
+  const addEvent = (title, date, type) => {
+    setData((prev) => ({
+      ...prev,
+      events: [{ id: Date.now(), title, date, type }, ...(prev.events || [])],
+    }));
+  };
+
+  const editMessage = (messageId, newText) => {
+    setData((prev) => ({
+      ...prev,
+      messages: (prev.messages || []).map((m) =>
+        m.id === messageId ? { ...m, text: newText, edited: true } : m,
+      ),
+    }));
+  };
+
+  const deleteMessage = (messageId) => {
+    setData((prev) => ({
+      ...prev,
+      messages: (prev.messages || []).filter((m) => m.id !== messageId),
+    }));
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        data,
+        setData,
+        addTask,
+        toggleTask,
+        deleteTask,
+        approveTask,
+        markAttendance,
+        addGrade,
+        updateSchedule,
+        sendMessage,
+        markMessagesAsRead,
+        editMessage,
+        deleteMessage,
+        addAnnouncement,
+        deleteAnnouncement,
+        addQuiz,
+        submitQuiz,
+        addLibraryItem,
+        addEvent,
+        addSubject,
+        deleteSubject,
+        syncInfo,
+        syncToServer,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useAppContext = () => useContext(AppContext);
