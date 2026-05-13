@@ -1,24 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI } from '../api';
 
 const AuthContext = createContext();
 
-const initialUsers = [
-  { id: 1, username: 'admin', password: '123', role: 'admin' }, // Default admin
-];
-
 export const AuthProvider = ({ children }) => {
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem('schoolPlannerUsers');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return initialUsers;
-      }
-    }
-    return initialUsers;
-  });
-
+  const [users, setUsers] = useState([]);
+  
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('schoolPlannerCurrentUser');
     if (saved) {
@@ -31,9 +18,18 @@ export const AuthProvider = ({ children }) => {
     return null;
   });
 
+  const fetchUsers = async () => {
+    try {
+      const data = await authAPI.getUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('schoolPlannerUsers', JSON.stringify(users));
-  }, [users]);
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -43,36 +39,56 @@ export const AuthProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  const login = (username, password) => {
-    const user = users.find(u => u.username === username && u.password === password);
-    if (user) {
-      setCurrentUser(user);
-      return { success: true };
+  const login = async (username, password) => {
+    try {
+      const response = await authAPI.login(username, password);
+      if (response && response.user) {
+        setCurrentUser(response.user);
+        return { success: true };
+      }
+      return { success: false, message: 'Invalid username or password' };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, message: 'Invalid username or password' };
     }
-    return { success: false, message: 'Invalid username or password' };
   };
 
   const logout = () => {
     setCurrentUser(null);
   };
 
-  const createUser = (username, password, role, extraData = {}) => {
-    if (users.find(u => u.username === username)) {
-      return { success: false, message: 'Username already exists' };
+  const createUser = async (username, password, role, extraData = {}) => {
+    try {
+      const newUser = await authAPI.createUser({ username, password, role, ...extraData });
+      if (newUser.error) {
+        return { success: false, message: newUser.error };
+      }
+      await fetchUsers();
+      return { success: true };
+    } catch (error) {
+      console.error("Create user error:", error);
+      return { success: false, message: 'Failed to create user' };
     }
-    const newUser = { id: Date.now(), username, password, role, ...extraData };
-    setUsers(prev => [...prev, newUser]);
-    return { success: true };
   };
 
-  const deleteUser = (id) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
+  const deleteUser = async (id) => {
+    try {
+      await authAPI.deleteUser(id);
+      await fetchUsers();
+    } catch (error) {
+      console.error("Delete user error:", error);
+    }
   };
 
-  const updateProfilePic = (id, base64Image) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, avatar: base64Image } : u));
-    if (currentUser?.id === id) {
-      setCurrentUser(prev => ({ ...prev, avatar: base64Image }));
+  const updateProfilePic = async (id, base64Image) => {
+    try {
+      await authAPI.updateUser(id, { avatar: base64Image });
+      await fetchUsers();
+      if (currentUser?.id === id) {
+        setCurrentUser(prev => ({ ...prev, avatar: base64Image }));
+      }
+    } catch (error) {
+      console.error("Update profile pic error:", error);
     }
   };
 
