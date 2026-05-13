@@ -42,8 +42,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await authAPI.login(username, password);
-      if (response && response.user) {
-        setCurrentUser(response.user);
+      if (response && response.id) {
+        setCurrentUser(response);
         return { success: true };
       }
       return { success: false, message: 'Invalid username or password' };

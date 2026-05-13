@@ -110,7 +110,13 @@ app.post("/api/login", async (req, res) => {
 // Create user
 app.post("/api/users", async (req, res) => {
   try {
-    const { username, password, role, fullName, phone, metadata } = req.body;
+    const { username, password, role, fullName, phone, metadata, ...otherData } = req.body;
+    
+    // Merge otherData (like class, subject) into metadata
+    let finalMetadata = metadata || {};
+    if (otherData.class) finalMetadata.class = otherData.class;
+    if (otherData.subject) finalMetadata.subject = otherData.subject;
+    
     const result = await dbRun(
       "INSERT INTO users (username, password, role, fullName, phone, metadata) VALUES (?, ?, ?, ?, ?, ?)",
       [
@@ -119,7 +125,7 @@ app.post("/api/users", async (req, res) => {
         role,
         fullName || "",
         phone || "",
-        metadata ? JSON.stringify(metadata) : null,
+        Object.keys(finalMetadata).length > 0 ? JSON.stringify(finalMetadata) : null,
       ],
     );
     const user = await dbGet("SELECT * FROM users WHERE id = ?", [
