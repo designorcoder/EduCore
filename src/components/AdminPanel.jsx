@@ -115,7 +115,7 @@ export default function AdminPanel() {
       </header>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-slate-100 rounded-xl flex-wrap gap-1 w-max">
+      <div className="flex p-1 bg-slate-100 rounded-xl flex-wrap gap-1 w-full">
         <button 
           onClick={() => setActiveTab('users')}
           className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-slate-200/50'}`}

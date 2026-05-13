@@ -97,7 +97,7 @@ export default function ParentDashboard() {
       </header>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-slate-100 rounded-xl w-max flex-wrap gap-1">
+      <div className="flex p-1 bg-slate-100 rounded-xl w-full flex-wrap gap-1">
         <button 
           onClick={() => setActiveTab('overview')}
           className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'overview' ? 'bg-white shadow text-pink-600' : 'text-slate-500'}`}
@@ -210,7 +210,7 @@ export default function ParentDashboard() {
                         {t.task}
                       </p>
                       
-                      <div className={`flex items-center gap-1.5 mt-3 text-xs font-bold ${isDone ? 'text-slate-400' : isLate ? 'text-red-500 bg-red-50 w-max px-2 py-1 rounded-md' : 'text-amber-500'}`}>
+                      <div className={`flex items-center gap-1.5 mt-3 text-xs font-bold ${isDone ? 'text-slate-400' : isLate ? 'text-red-500 bg-red-50 w-full px-2 py-1 rounded-md' : 'text-amber-500'}`}>
                         <span>Muddati: {t.deadline} {isLate ? '(Muddati o\'tgan)' : ''}</span>
                         {isDone && <span className="ml-2 text-green-600 bg-green-100 px-2 py-0.5 rounded-md">Bajarilgan</span>}
                       </div>

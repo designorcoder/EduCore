@@ -83,7 +83,7 @@ function App() {
     <div className="min-h-screen bg-transparent flex flex-col md:flex-row max-w-6xl mx-auto overflow-hidden p-0 relative">
       
       {/* App Header overlay for Logout */}
-      <div className="absolute top-3 right-4 md:top-6 md:right-6 z-50 flex items-center gap-4 bg-white/80 backdrop-blur-xl px-5 py-2.5 rounded-full border border-slate-200 shadow-sm transition-colors duration-300">
+      <div className="absolute top-3 left-4 right-4 md:left-auto md:top-6 md:right-6 z-50 flex items-center justify-between md:justify-end gap-2 md:gap-4 bg-white/80 backdrop-blur-xl px-4 py-2.5 rounded-2xl md:rounded-full border border-slate-200 shadow-sm transition-colors duration-300">
         <button 
           onClick={() => setIsDark(!isDark)}
           className="text-slate-400 hover:text-amber-500 transition-colors flex items-center justify-center"

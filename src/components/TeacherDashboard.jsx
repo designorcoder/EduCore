@@ -227,7 +227,7 @@ export default function TeacherDashboard() {
                 {classStudents.length === 0 || getUniqueDates().length === 0 ? (
                   <div className="text-center py-10 text-slate-400 font-medium">Bu sinfda hozircha davomat yoki baholar kiritilmagan.</div>
                 ) : (
-                  <div className="min-w-max border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                  <div className="min-w-full border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                     <table className="w-full text-sm text-left">
                       <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[11px] tracking-wider border-b border-slate-200">
                         <tr>

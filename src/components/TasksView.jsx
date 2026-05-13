@@ -223,7 +223,7 @@ export default function TasksView() {
         )}
       </AnimatePresence>
 
-      <div className="flex p-1 bg-white/60 backdrop-blur border border-slate-200 rounded-2xl w-max shadow-sm mx-auto md:mx-0">
+      <div className="flex p-1 bg-white/60 backdrop-blur border border-slate-200 rounded-2xl w-full shadow-sm mx-auto md:mx-0">
         {[
           { id: "all", label: "Barchasi", count: data.tasks.length },
           {

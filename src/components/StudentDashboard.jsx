@@ -287,7 +287,7 @@ export default function StudentDashboard() {
                           {t.task}
                         </p>
                         
-                        <div className={`flex items-center gap-1.5 mt-3 text-xs font-bold ${isApproved ? 'text-green-500' : isRejected ? 'text-red-500' : isDone ? 'text-blue-500' : isLate ? 'text-red-500 bg-red-50 w-max px-2 py-1 rounded-md' : 'text-amber-500'}`}>
+                        <div className={`flex items-center gap-1.5 mt-3 text-xs font-bold ${isApproved ? 'text-green-500' : isRejected ? 'text-red-500' : isDone ? 'text-blue-500' : isLate ? 'text-red-500 bg-red-50 w-full px-2 py-1 rounded-md' : 'text-amber-500'}`}>
                           <Clock size={13} strokeWidth={2.5} />
                           <span>{t.deadline} {isLate ? '(Muddati o\'tgan)' : ''}</span>
                           {isRejected && <span className="ml-2 bg-red-100 px-2 py-0.5 rounded-md">Rad etildi. Qayta ishlang!</span>}
