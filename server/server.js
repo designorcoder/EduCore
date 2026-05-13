@@ -72,9 +72,8 @@ app.get("/api/users", async (req, res) => {
       const metadata = user.metadata ? JSON.parse(user.metadata) : {};
       return {
         ...user,
-        metadata,
-        class: metadata.class || null,
-        subject: metadata.subject || null,
+        ...metadata,
+        metadata
       };
     });
     res.json(usersWithMetadata);
@@ -95,9 +94,8 @@ app.post("/api/login", async (req, res) => {
       const metadata = user.metadata ? JSON.parse(user.metadata) : {};
       res.json({
         ...user,
-        metadata,
-        class: metadata.class || null,
-        subject: metadata.subject || null,
+        ...metadata,
+        metadata
       });
     } else {
       res.status(401).json({ error: "Invalid credentials" });
@@ -112,10 +110,8 @@ app.post("/api/users", async (req, res) => {
   try {
     const { username, password, role, fullName, phone, metadata, ...otherData } = req.body;
     
-    // Merge otherData (like class, subject) into metadata
-    let finalMetadata = metadata || {};
-    if (otherData.class) finalMetadata.class = otherData.class;
-    if (otherData.subject) finalMetadata.subject = otherData.subject;
+    // Merge all other top-level properties into metadata
+    let finalMetadata = { ...(metadata || {}), ...otherData };
     
     const result = await dbRun(
       "INSERT INTO users (username, password, role, fullName, phone, metadata) VALUES (?, ?, ?, ?, ?, ?)",
@@ -134,9 +130,8 @@ app.post("/api/users", async (req, res) => {
     const userMetadata = user.metadata ? JSON.parse(user.metadata) : {};
     res.json({
       ...user,
-      metadata: userMetadata,
-      class: userMetadata.class || null,
-      subject: userMetadata.subject || null,
+      ...userMetadata,
+      metadata: userMetadata
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
