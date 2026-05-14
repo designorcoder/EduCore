@@ -141,7 +141,7 @@ export default function TeacherDashboard() {
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              className="absolute top-14 right-0 z-[100] w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-2xl p-2.5 flex flex-col gap-1.5"
+              className="absolute top-14 left-0 sm:left-auto sm:right-0 z-[100] w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-2xl p-2.5 flex flex-col gap-1.5"
             >
               <button onClick={() => {setActiveTab('attendance'); setIsMenuOpen(false);}} className={`px-4 py-3 rounded-xl text-[15px] font-bold transition-all flex items-center gap-3 ${activeTab === 'attendance' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md' : 'text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-700 hover:text-amber-600 hover:translate-x-1'}`}>{t('attendance')}</button>
               <button onClick={() => {setActiveTab('journal'); setIsMenuOpen(false);}} className={`px-4 py-3 rounded-xl text-[15px] font-bold transition-all flex items-center gap-3 ${activeTab === 'journal' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md' : 'text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-700 hover:text-amber-600 hover:translate-x-1'}`}><BookOpen size={20} /> {t('journal')}</button>
