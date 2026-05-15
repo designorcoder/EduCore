@@ -201,14 +201,20 @@ export default function TeacherDashboard() {
                           <button onClick={() => markAttendance(date, selectedClass, student.id, false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!isPresent ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Yo'q</button>
                         </div>
                         
-                        <div className="col-span-12 md:col-span-4 flex justify-end md:justify-center">
-                          <select value={currentGrade} onChange={e => addGrade(date, selectedClass, currentUser.subject, student.id, e.target.value)} className="bg-white border-2 border-slate-200 p-1.5 rounded-lg outline-none focus:border-amber-400 font-bold text-slate-700 w-20 text-center">
-                            <option value="">-</option>
-                            <option value="5">5 (A'lo)</option>
-                            <option value="4">4 (Yaxshi)</option>
-                            <option value="3">3 (Qoniqarli)</option>
-                            <option value="2">2 (Yomon)</option>
-                          </select>
+                        <div className="col-span-12 md:col-span-4 flex justify-end md:justify-center items-center">
+                          {!isPresent ? (
+                            <span className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-md border border-red-200">
+                              Darsga kirmadi
+                            </span>
+                          ) : (
+                            <select value={currentGrade} onChange={e => addGrade(date, selectedClass, currentUser.subject, student.id, e.target.value)} className="bg-white border-2 border-slate-200 p-1.5 rounded-lg outline-none focus:border-amber-400 font-bold text-slate-700 w-20 text-center">
+                              <option value="">-</option>
+                              <option value="5">5 (A'lo)</option>
+                              <option value="4">4 (Yaxshi)</option>
+                              <option value="3">3 (Qoniqarli)</option>
+                              <option value="2">2 (Yomon)</option>
+                            </select>
+                          )}
                         </div>
                       </div>
                     )
