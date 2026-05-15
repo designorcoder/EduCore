@@ -28,10 +28,8 @@ export default function TeacherDashboard() {
   const [libType, setLibType] = useState('link');
 
   const [quizTitle, setQuizTitle] = useState('');
-  const [quizQ, setQuizQ] = useState('');
-  const [quizOpts, setQuizOpts] = useState(['', '', '', '']);
-  const [quizCorr, setQuizCorr] = useState(0);
-  const [pendingQuestions, setPendingQuestions] = useState([]);
+  const [quizCount, setQuizCount] = useState(5);
+  const [questionsData, setQuestionsData] = useState(Array.from({ length: 5 }, () => ({ question: '', options: ['', '', '', ''], correctIndex: 0 })));
 
   const students = users.filter(u => u.role === 'student');
   const availableClasses = [...new Set(students.map(s => s.class))].filter(Boolean);
@@ -64,19 +62,15 @@ export default function TeacherDashboard() {
     }
   };
 
-  const addQuizQuestion = () => {
-    if (quizQ && quizOpts.every(o => o.trim() !== '')) {
-      setPendingQuestions([...pendingQuestions, { question: quizQ, options: quizOpts, correctIndex: Number(quizCorr) }]);
-      setQuizQ('');
-      setQuizOpts(['', '', '', '']);
-    }
-  };
-
   const handleQuizPublish = () => {
-    if (quizTitle && pendingQuestions.length > 0 && selectedClass) {
-      addQuiz(currentUser.subject, selectedClass, quizTitle, pendingQuestions);
+    const isValid = questionsData.every(q => q.question.trim() !== '' && q.options.every(o => o.trim() !== ''));
+    if (quizTitle && isValid && selectedClass) {
+      addQuiz(currentUser.subject, selectedClass, quizTitle, questionsData);
       setQuizTitle('');
-      setPendingQuestions([]);
+      setQuestionsData(Array.from({ length: quizCount }, () => ({ question: '', options: ['', '', '', ''], correctIndex: 0 })));
+      alert("Test muvaffaqiyatli yaratildi va o'quvchilarga yuborildi!");
+    } else {
+      alert("Iltimos, barcha savollar va variantlarni to'ldiring, hamda sinf va test mavzusini kiriting.");
     }
   };
 
@@ -397,36 +391,66 @@ export default function TeacherDashboard() {
           {activeTab === 'quizzes' && (
             <motion.div key="quizzes" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className="space-y-6">
               <div className="glass-panel p-6 border-t-4 border-t-indigo-500">
-                <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <FileQuestion size={22} className="text-indigo-500" /> Yangi Test Yaratish ({selectedClass})
-                </h2>
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
+                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <FileQuestion size={22} className="text-indigo-500" /> Yangi Test Yaratish ({selectedClass})
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-bold text-slate-500">Savollar soni:</label>
+                    <select 
+                      value={quizCount} 
+                      onChange={e => {
+                        const n = Number(e.target.value);
+                        setQuizCount(n);
+                        setQuestionsData(Array.from({ length: n }, (_, i) => questionsData[i] || { question: '', options: ['', '', '', ''], correctIndex: 0 }));
+                      }}
+                      className="bg-slate-50 border-2 border-slate-200 p-2 rounded-xl outline-none focus:border-indigo-400 font-bold text-slate-700"
+                    >
+                      <option value={5}>5 ta</option>
+                      <option value={10}>10 ta</option>
+                      <option value={15}>15 ta</option>
+                      <option value={20}>20 ta</option>
+                    </select>
+                  </div>
+                </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <input type="text" value={quizTitle} onChange={e=>setQuizTitle(e.target.value)} placeholder="Test mavzusi (masalan: 1-chorak takrorlash)" className="w-full bg-slate-50 border-2 border-slate-200 p-3 rounded-xl outline-none focus:border-indigo-400 font-semibold" />
                   
-                  <div className="p-4 bg-slate-50 border-2 border-slate-200 rounded-xl space-y-3">
-                    <input type="text" value={quizQ} onChange={e=>setQuizQ(e.target.value)} placeholder="Savolni kiriting..." className="w-full bg-white border border-slate-200 p-2 rounded-lg outline-none focus:border-indigo-400" />
-                    <div className="grid grid-cols-2 gap-2">
-                      {quizOpts.map((opt, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <input type="radio" name="corr" checked={quizCorr===i} onChange={()=>setQuizCorr(i)} className="w-4 h-4 text-indigo-600" />
-                          <input type="text" value={opt} onChange={e=>{const n=[...quizOpts]; n[i]=e.target.value; setQuizOpts(n);}} placeholder={`Variant ${i+1}`} className="flex-1 bg-white border border-slate-200 p-2 rounded-lg outline-none focus:border-indigo-400" />
+                  <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2 py-4">
+                    {questionsData.map((qData, qIdx) => (
+                      <div key={qIdx} className="p-4 bg-slate-50 border-2 border-slate-200 rounded-xl space-y-3 relative mt-2 ml-2">
+                        <div className="absolute -top-4 -left-4 w-8 h-8 bg-indigo-500 text-white font-black rounded-full flex items-center justify-center shadow-md border-2 border-white">{qIdx + 1}</div>
+                        <input type="text" value={qData.question} onChange={e => {
+                          const newQ = [...questionsData];
+                          newQ[qIdx] = { ...newQ[qIdx], question: e.target.value };
+                          setQuestionsData(newQ);
+                        }} placeholder={`${qIdx + 1}-savolni kiriting...`} className="w-full bg-white border border-slate-200 p-2.5 rounded-lg outline-none focus:border-indigo-400 font-bold" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {qData.options.map((opt, i) => (
+                            <div key={i} className={`flex items-center gap-2 p-2 border rounded-lg transition-colors ${qData.correctIndex === i ? 'border-indigo-400 bg-indigo-50/50' : 'border-slate-200 bg-white'}`}>
+                              <input type="radio" name={`corr_${qIdx}`} checked={qData.correctIndex === i} onChange={() => {
+                                const newQ = [...questionsData];
+                                newQ[qIdx] = { ...newQ[qIdx], correctIndex: i };
+                                setQuestionsData(newQ);
+                              }} className="w-4 h-4 text-indigo-600" />
+                              <input type="text" value={opt} onChange={e => {
+                                const newQ = [...questionsData];
+                                const newOpts = [...newQ[qIdx].options];
+                                newOpts[i] = e.target.value;
+                                newQ[qIdx] = { ...newQ[qIdx], options: newOpts };
+                                setQuestionsData(newQ);
+                              }} placeholder={`Variant ${i+1}`} className="flex-1 bg-transparent outline-none text-sm font-medium" />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <button onClick={addQuizQuestion} className="w-full py-2 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300">Savolni qo'shish</button>
+                      </div>
+                    ))}
                   </div>
 
-                  {pendingQuestions.length > 0 && (
-                    <div className="space-y-2">
-                      {pendingQuestions.map((q, i) => (
-                        <div key={i} className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-800">
-                          <strong>{i+1}. {q.question}</strong> ({q.options[q.correctIndex]})
-                        </div>
-                      ))}
-                      <button onClick={handleQuizPublish} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700">Testni {selectedClass} ga yuborish</button>
-                    </div>
-                  )}
+                  <button onClick={handleQuizPublish} className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all text-lg flex justify-center items-center gap-2">
+                    <Check size={24} /> Testni {selectedClass || "sinf"} ga yuborish
+                  </button>
                 </div>
               </div>
             </motion.div>
