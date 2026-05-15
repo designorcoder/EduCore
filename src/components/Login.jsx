@@ -47,7 +47,7 @@ export default function Login() {
                 value={username} 
                 onChange={e => setUsername(e.target.value)}
                 className="w-full bg-white border-2 border-slate-200 pl-10 pr-4 py-3 rounded-xl outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 text-[15px] font-semibold text-slate-700 transition-all"
-                placeholder="e.g. Login kiriting"
+                placeholder="Login kiriting"
               />
             </div>
           </div>
@@ -74,9 +74,9 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        {/* <div className="mt-6 text-center">
           <p className="text-sm text-slate-400">Default Admin: <span className="font-bold text-slate-600"></span></p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

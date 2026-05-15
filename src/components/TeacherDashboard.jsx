@@ -480,31 +480,9 @@ export default function TeacherDashboard() {
           {activeTab === 'chat' && (
             <motion.div key="chat" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className="grid md:grid-cols-12 gap-6 mt-4">
               <div className={`md:col-span-4 glass-panel p-4 h-max ${selectedChat ? 'hidden md:block' : 'block'}`}>
-                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><User size={18} className="text-indigo-500"/> Guruh va O'quvchilar</h3>
+                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><User size={18} className="text-indigo-500"/> O'quvchilar bilan suhbat</h3>
                   <div className="space-y-2 h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                    {selectedClass && (
-                      <button 
-                        onClick={() => setSelectedChat({ id: `GROUP_${selectedClass}`, name: selectedClass, type: 'group' })}
-                        className={`w-full text-left p-3 rounded-xl border transition-all flex justify-between items-center ${selectedChat?.id === `GROUP_${selectedClass}` ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-100 hover:border-amber-100'}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500">
-                            <Users size={20} />
-                          </div>
-                          <div className="font-bold text-sm">Sinf Guruhi</div>
-                        </div>
-                        {(() => {
-                          const msgCount = (data.messages || []).filter(m => m.receiverId === `GROUP_${selectedClass}` && !(m.readBy || [m.senderId]).includes(currentUser.id)).length;
-                          return msgCount > 0 ? (
-                            <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
-                              {msgCount}
-                            </span>
-                          ) : null;
-                        })()}
-                      </button>
-                    )}
-                    
-                    <div className="my-4 border-t border-slate-100"></div>
+
 
                     {students
                       .filter(s => availableClasses.includes(s.class))
