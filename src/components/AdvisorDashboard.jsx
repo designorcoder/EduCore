@@ -46,7 +46,10 @@ export default function AdvisorDashboard() {
 
   const getAttendance = (studentId) => {
     const record = data.attendance.find(a => a.date === date && a.studentId === studentId);
-    return record ? record.isPresent : true;
+    if (!record) return 'keldi';
+    if (record.isPresent === true) return 'keldi';
+    if (record.isPresent === false) return 'kelmadi';
+    return record.isPresent;
   };
 
   const totalUnread = (data.messages || []).filter(m => m.receiverId === currentUser.id && !m.read).length;
@@ -151,9 +154,10 @@ export default function AdvisorDashboard() {
                           {student.username}
                         </div>
                         
-                        <div className="col-span-4 flex justify-center gap-2">
-                          <button onClick={() => markAttendance(date, selectedClass, student.id, true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isPresent ? 'bg-green-100 text-green-700 ring-2 ring-green-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Keldi</button>
-                          <button onClick={() => markAttendance(date, selectedClass, student.id, false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!isPresent ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Yo'q</button>
+                        <div className="col-span-4 flex justify-center gap-1 flex-wrap md:flex-nowrap">
+                          <button onClick={() => markAttendance(date, selectedClass, student.id, 'keldi')} className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isPresent === 'keldi' ? 'bg-green-100 text-green-700 ring-2 ring-green-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Keldi</button>
+                          <button onClick={() => markAttendance(date, selectedClass, student.id, 'kelmadi')} className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isPresent === 'kelmadi' ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Kelmadi</button>
+                          <button onClick={() => markAttendance(date, selectedClass, student.id, 'kirmadi')} className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isPresent === 'kirmadi' ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Kirmadi</button>
                         </div>
                       </div>
                     )

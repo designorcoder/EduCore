@@ -82,7 +82,10 @@ export default function TeacherDashboard() {
 
   const getAttendance = (studentId) => {
     const record = data.attendance.find(a => a.date === date && a.studentId === studentId);
-    return record ? record.isPresent : true;
+    if (!record) return 'keldi';
+    if (record.isPresent === true) return 'keldi';
+    if (record.isPresent === false) return 'kelmadi';
+    return record.isPresent;
   };
 
   const getGrade = (studentId) => {
@@ -196,14 +199,19 @@ export default function TeacherDashboard() {
                           {student.username}
                         </div>
                         
-                        <div className="col-span-6 md:col-span-4 flex justify-center gap-2">
-                          <button onClick={() => markAttendance(date, selectedClass, student.id, true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isPresent ? 'bg-green-100 text-green-700 ring-2 ring-green-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Keldi</button>
-                          <button onClick={() => markAttendance(date, selectedClass, student.id, false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!isPresent ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Yo'q</button>
+                        <div className="col-span-6 md:col-span-4 flex justify-center gap-1 flex-wrap md:flex-nowrap">
+                          <button onClick={() => markAttendance(date, selectedClass, student.id, 'keldi')} className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isPresent === 'keldi' ? 'bg-green-100 text-green-700 ring-2 ring-green-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Keldi</button>
+                          <button onClick={() => markAttendance(date, selectedClass, student.id, 'kelmadi')} className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isPresent === 'kelmadi' ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Kelmadi</button>
+                          <button onClick={() => markAttendance(date, selectedClass, student.id, 'kirmadi')} className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isPresent === 'kirmadi' ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-400' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Kirmadi</button>
                         </div>
                         
-                        <div className="col-span-12 md:col-span-4 flex justify-end md:justify-center items-center">
-                          {!isPresent ? (
-                            <span className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-md border border-red-200">
+                        <div className="col-span-12 md:col-span-4 flex justify-end md:justify-center items-center mt-2 md:mt-0">
+                          {isPresent === 'kelmadi' ? (
+                            <span className="text-[11px] font-bold text-red-500 bg-red-50 px-2 py-1.5 rounded-md border border-red-200 uppercase tracking-wide">
+                              Kelmadi
+                            </span>
+                          ) : isPresent === 'kirmadi' ? (
+                            <span className="text-[11px] font-bold text-orange-500 bg-orange-50 px-2 py-1.5 rounded-md border border-orange-200 uppercase tracking-wide">
                               Darsga kirmadi
                             </span>
                           ) : (
@@ -253,12 +261,15 @@ export default function TeacherDashboard() {
                             <td className="p-3 border-r border-slate-200 font-bold text-slate-800">{student.username}</td>
                             {getUniqueDates().map(d => {
                               const attendance = data.attendance.find(a => a.date === d && a.studentId === student.id);
-                              const isPresent = attendance ? attendance.isPresent : true;
+                              let isP = attendance ? attendance.isPresent : 'keldi';
+                              if (isP === true) isP = 'keldi';
+                              if (isP === false) isP = 'kelmadi';
+                              const isPresent = isP;
                               const grade = data.grades.find(g => g.date === d && g.studentId === student.id && g.subject === currentUser.subject)?.grade;
 
                               return (
-                                <td key={d} className={`p-3 border-r border-slate-200 text-center relative font-black ${!isPresent ? 'bg-red-50' : ''}`}>
-                                  {!isPresent ? <span className="text-red-500">yo'q</span> : (
+                                <td key={d} className={`p-3 border-r border-slate-200 text-center relative font-black ${isPresent === 'kelmadi' ? 'bg-red-50' : isPresent === 'kirmadi' ? 'bg-orange-50' : ''}`}>
+                                  {isPresent === 'kelmadi' ? <span className="text-red-500 text-[10px] uppercase">yo'q</span> : isPresent === 'kirmadi' ? <span className="text-orange-500 text-[10px] uppercase">kirmadi</span> : (
                                     grade ? <span className={grade === '5' ? 'text-green-500' : grade === '4' ? 'text-blue-500' : 'text-amber-500'}>{grade}</span> : <span className="text-slate-300">-</span>
                                   )}
                                 </td>

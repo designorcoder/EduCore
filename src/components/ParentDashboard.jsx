@@ -56,7 +56,7 @@ export default function ParentDashboard() {
 
   // Stats
   const childAttendance = data.attendance.filter(a => a.studentId === child.id);
-  const absences = childAttendance.filter(a => !a.isPresent).length;
+  const absences = childAttendance.filter(a => a.isPresent === 'kelmadi' || a.isPresent === false || a.isPresent === 'kirmadi').length;
   
   const childGrades = data.grades.filter(g => g.studentId === child.id);
   const avgGrade = childGrades.length > 0 
