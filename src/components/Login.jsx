@@ -4,8 +4,8 @@ import { LogIn, User, Lock } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('test.otaona');
+  const [password, setPassword] = useState('123');
   const [error, setError] = useState('');
 
   const handleLogin = (e) => {
